@@ -163,7 +163,8 @@ def query(project, query, name, head, basepath):
     connection = sqlite3.connect(name)
     cursor = connection.cursor()
     cursor.execute('DELETE FROM query_results')
-    for count, repo in enumerate(repositories):
+    print("Adding to database:")
+    for count, repo in tqdm(enumerate(repositories)):
         if count > int(head):
             break
         repository_path = Path(basepath, repo.owner.login, repo.name)
