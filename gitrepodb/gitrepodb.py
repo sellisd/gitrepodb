@@ -168,7 +168,7 @@ def query(project, query, name, head, basepath):
             break
         repository_path = Path(basepath, repo.owner.login, repo.name)
         insert_query_string = """
-        INSERT INTO query_results
+        REPLACE INTO query_results
           (
             project,
             repository_owner,
