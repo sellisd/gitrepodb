@@ -165,7 +165,7 @@ def query(project, query, name, head, basepath):
     cursor.execute('DELETE FROM query_results')
     print("Adding to database:")
     for count, repo in tqdm(enumerate(repositories)):
-        if count > int(head):
+        if count >= int(head):
             break
         repository_path = Path(basepath, repo.owner.login, repo.name)
         insert_query_string = """
