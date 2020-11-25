@@ -25,7 +25,9 @@ def gitrepodb():
 @gitrepodb.command()
 @click.option('--name', default='./repositories.db', help='Remove repositories that are not used in any project from the database.')
 def clean_database(name):
-    # delete rows in repository table that do not belong to a project
+    """ delete rows in repository table that do not belong to a project"""
+    if not database_exists(name):
+        return
     connection = sqlite3.connect(name)
     cursor = connection.cursor()
     """
@@ -41,9 +43,19 @@ def clean_database(name):
     connection.close()
 
 
+def database_exists(name):
+    "Check if database exists"
+    if not Path(name).exists():
+        print(f"Database {name} does not exist, check spelling or create "
+              "running: gitrepodb init")
+        return False
+    else:
+        return True
+
+
 @gitrepodb.command()
 @click.option('--name', default='./repositories.db', help='Path and file name '
-              'of database')
+              'of database', show_default=True)
 def init(name):
     conn = None
     if Path(name).exists():
@@ -63,13 +75,14 @@ def init(name):
 
 
 @gitrepodb.command()
-@click.option('--project', default='python', help='Query for popular project_dict '
-              'based on language', show_default=True)
 @click.option('--name', default='./repositories.db', help='Path and file name '
               'of database', show_default=True)
-@click.option('--basepath', default='/mnt/Data/scratch', help='Base path where all repositories will be stored')
-def add(project, name, basepath):
+@click.option('--basepath', default='/mnt/Data/scratch', help='Path where all '
+              'repositories will be stored', show_default=True)
+def add(name, basepath):
     """Add query results to database."""
+    if not database_exists(name):
+        return
     connection = sqlite3.connect(name)
     cursor = connection.cursor()
     query_to_projects_string = """
@@ -107,14 +120,19 @@ def add(project, name, basepath):
 
 
 @gitrepodb.command()
-@click.option('--name', default='./repositories.db', help='Clone or pull repositories from database')
-@click.option('--project', default=None, help='Clone or pull repositories in specific project')
-@click.option('--update', default=False, help='If repository exists already on disk git pull to update')
+@click.option('--name', default='./repositories.db', help='Path and file name '
+              'of database', show_default=True)
+@click.option('--project', default=None, help='Download to disk repositories '
+              ' in project', show_default=True)
+@click.option('--update', default=False, help='If repository is already '
+              'cloned, pull to update', show_default=True)
 def download(name, project, update):
+    if not database_exists(name):
+        return
     connection = sqlite3.connect(name)
     connection.row_factory = sqlite3.Row
     cursor = connection.cursor()
-    select_projects_string = """
+    select_projects_string = f"""
     SELECT projects.repository_owner,
       projects.repository_name,
       repositories.repository_path,
@@ -123,6 +141,7 @@ def download(name, project, update):
       LEFT JOIN repositories
       ON projects.repository_owner = repositories.repository_owner
         AND projects.repository_name = repositories.repository_name
+        AND projects.project = {project}
     """
     cursor.execute(select_projects_string)
     rows = cursor.fetchall()
@@ -139,13 +158,21 @@ def download(name, project, update):
 
 
 @gitrepodb.command()
-@click.option('--project', default='python', help='Assign the query to a project', show_default=True, required=True)
-@click.option('--query', default=None, help='Query using github API if none is provided [defautl] then query using project as language', show_default=True)
+@click.option('--project', default='python',
+              help='Assign the query to a project', show_default=True,
+              required=True)
+@click.option('--query', default=None, help='Query using github API. If none'
+              ' is provided [defautl] then query using project as language',
+              show_default=True)
 @click.option('--name', default='./repositories.db', help='Path and file name '
               'of database', show_default=True)
-@click.option('--head', default=10, help='Maximum number of repositories in query')
-@click.option('--basepath', default='/mnt/Data/scratch', help='Base path where all repositories will be stored')
-def query(project, query, name, head, basepath):
+@click.option('--head', default=5000,
+              help='Maximum number of repositories in query',
+              show_default=True)
+def query(project, query, name, head):
+    """Query GitHub API and insert results into query_results table"""
+    if not database_exists(name):
+        return
     if query is None and project:
         if project in project_dict:
             query = f"language:{project_dict[project]},sort:stars-desc:archived=False"
@@ -167,7 +194,6 @@ def query(project, query, name, head, basepath):
     for count, repo in tqdm(enumerate(repositories)):
         if count >= int(head):
             break
-        repository_path = Path(basepath, repo.owner.login, repo.name)
         insert_query_string = """
         REPLACE INTO query_results
           (
@@ -198,6 +224,8 @@ def query(project, query, name, head, basepath):
 @click.option('--name', default='./repositories.db', help='Path and file name '
               'of database', show_default=True)
 def sync(project, name):
+    if not database_exists(name):
+        return
     "Sync query results to database, add query results and remove existing ones in the same project"
     connection = sqlite3.connect(name)
     cursor = connection.cursor()
