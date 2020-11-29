@@ -123,7 +123,7 @@ def add(name, basepath):
 @click.option('--name', default='./repositories.db', help='Path and file name '
               'of database', show_default=True)
 @click.option('--project', default=None, help='Download to disk repositories '
-              ' in project', show_default=True)
+              ' in project', show_default=True, required=True)
 @click.option('--update', default=False, help='If repository is already '
               'cloned, pull to update', show_default=True)
 def download(name, project, update):
@@ -141,7 +141,7 @@ def download(name, project, update):
       LEFT JOIN repositories
       ON projects.repository_owner = repositories.repository_owner
         AND projects.repository_name = repositories.repository_name
-        AND projects.project = {project}
+        AND projects.project = "{project}"
     """
     cursor.execute(select_projects_string)
     rows = cursor.fetchall()
