@@ -138,7 +138,7 @@ def download(name, project, update):
       repositories.repository_path,
       clone_url
     FROM projects
-      LEFT JOIN repositories
+      INNER JOIN repositories
       ON projects.repository_owner = repositories.repository_owner
         AND projects.repository_name = repositories.repository_name
         AND projects.project = "{project}"
