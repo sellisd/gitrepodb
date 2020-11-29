@@ -24,7 +24,7 @@ Querying GitHub is performed with the github API. The API limits the number of r
 To develop it is easier to clone and install editable:
 
 ```shell
-git clone
+git clone https://github.com/sellisd/gitrepodb.git
 cd gitrepodb/
 pip install -e .
 ```
