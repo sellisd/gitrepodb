@@ -64,7 +64,6 @@ def init(name):
     try:
         connection = sqlite3.connect(name)
         cursor = connection.cursor()
-        breakpoint()
         sql_script = (pkg_resources.files(
             'gitrepodb.sql_scripts').joinpath('init.sql').read_text())
         cursor.executescript(sql_script)
