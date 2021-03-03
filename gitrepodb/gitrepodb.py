@@ -56,11 +56,14 @@ def database_exists(name):
 @gitrepodb.command()
 @click.option('--name', default='./repositories.db', help='Path and file name '
               'of database', show_default=True)
-def init(name):
+@click.option('--overwrite/--no-overwrite', default=False, help='Overwrite '
+              'database file if existing', show_default=True)
+def init(name, overwrite):
     conn = None
-    if Path(name).exists():
-        print(f"{name} already exists I am not overwriting")
-        return
+    if(not overwrite):
+        if Path(name).exists():
+            print(f"{name} already exists I am not overwriting")
+            return
     try:
         connection = sqlite3.connect(name)
         cursor = connection.cursor()

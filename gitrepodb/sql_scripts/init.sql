@@ -1,4 +1,4 @@
-CREATE TABLE projects
+CREATE TABLE IF NOT EXISTS projects
 (
   project TEXT,
   repository_owner TEXT,
@@ -6,7 +6,7 @@ CREATE TABLE projects
   PRIMARY KEY(project, repository_owner, repository_name)
 );
 
-CREATE TABLE repositories(
+CREATE TABLE IF NOT EXISTS repositories(
   repository_owner TEXT,
   repository_name TEXT,
   last_pulled TEXT,
@@ -18,7 +18,7 @@ CREATE TABLE repositories(
   REFERENCES projects(repository_owner, repository_name)
 );
 
-CREATE TABLE query_results
+CREATE TABLE IF NOT EXISTS query_results
 (
   project TEXT,
   repository_owner TEXT,
