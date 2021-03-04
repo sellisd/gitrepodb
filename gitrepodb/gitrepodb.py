@@ -25,7 +25,7 @@ def gitrepodb():
 @gitrepodb.command()
 @click.option('--name', default='./repositories.db', help='Remove repositories that are not used in any project from the database.')
 def clean_database(name):
-    """ delete rows in repository table that do not belong to a project"""
+    """Delete rows in repository table that do not belong to a project."""
     if not database_exists(name):
         return
     connection = sqlite3.connect(name)
