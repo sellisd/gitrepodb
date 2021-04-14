@@ -260,7 +260,7 @@ def sync(project, name):
 
 def clone(url, path):
     try:
-        Repo.clone_from(url, path)
+        Repo.clone_from(url, path, depth=1)
     except exc.BadCredentialsException:
         print("Bad credenttials")
     except exc.UnknownObjectException:
@@ -282,4 +282,4 @@ def pull_or_clone(url, path, pull=True):
     except exc.NoSuchPathError:
         print(f"Clonning {url} into {path}")
         Path(path).mkdir(parents=True)
-        Repo.clone_from(url, path)
+        Repo.clone_from(url, path, depth=1)
