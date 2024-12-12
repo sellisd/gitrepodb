@@ -80,7 +80,7 @@ def init(name, overwrite):
 @gitrepodb.command()
 @click.option('--name', default='./repositories.db', help='Path and file name '
               'of database', show_default=True)
-@click.option('--basepath', default='/mnt/Data/scratch', help='Path where all '
+@click.option('--basepath', default='./scratch', help='Path where all '
               'repositories will be stored', show_default=True)
 def add(name, basepath):
     """Add query results to database."""
