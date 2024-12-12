@@ -17,7 +17,7 @@ python -m pip install git+https://github.com/sellisd/gitrepodb.git
 gitrepodb init # initialize database
 gitrepodb query --head 10 --project python # query github for top 10 python repositories
 gitrepodb add # add query results to database
-gitrepodb download # clone repositories in database
+gitrepodb download --project python # clone repositories in database
 ```
 
 With the above commands we create a database with the following schema: 
