@@ -187,7 +187,7 @@ def query(project, query, name, head):
         print("Querying github...", end="")
         g = Github(os.getenv('github'))
         repositories = g.search_repositories(query=query)
-        print(f"got {repositories.totalCount} repositories.")
+        print(f"got {repositories.totalCount} repositories, will keep the top {head}")
     except BadCredentialsException as e:
         print(e)
     connection = sqlite3.connect(name)
