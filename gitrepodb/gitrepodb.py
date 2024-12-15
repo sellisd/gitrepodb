@@ -14,7 +14,7 @@ from github.GithubException import BadCredentialsException
 from tqdm import tqdm
 
 project_dict = {'python': 'python',
-                'jupyter': 'Jupyter Notebook',
+                'jupyter': '"Jupyter Notebook"',
                 'java': 'Java'}
 
 logging.basicConfig(level=logging.INFO)
@@ -194,7 +194,7 @@ def query(project, query, name, head):
             return
     load_dotenv()
     try:
-        logger.info("Querying github...")
+        logger.info(f"Querying github with query {query}")
         g = Github(os.getenv('github'))
         repositories = g.search_repositories(query=query)
         logger.info(f"got {repositories.totalCount} repositories, will keep the top {head}")
