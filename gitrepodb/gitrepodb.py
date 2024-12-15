@@ -4,6 +4,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 from sqlite3 import Error
+import logging
 
 import click
 from dotenv import load_dotenv
@@ -16,6 +17,8 @@ project_dict = {'python': 'python',
                 'jupyter': 'Jupyter Notebook',
                 'java': 'Java'}
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @click.group()
 def gitrepodb():
@@ -30,26 +33,33 @@ def clean_database(name):
         return
     connection = sqlite3.connect(name)
     cursor = connection.cursor()
-    """
-    DELETE
-    FROM repositories
-    WHERE NOT EXISTS
-        (SELECT *
-         FROM projects
-         WHERE projects.repository_owner = repositories.repository_owner
-           AND projects.repository_name = repositories.repository_name)
-    """
-    connection.commit()
-    connection.close()
+    try:
+        logger.info("Cleaning database...")
+        delete_query = """
+        DELETE
+        FROM repositories
+        WHERE NOT EXISTS
+            (SELECT *
+             FROM projects
+             WHERE projects.repository_owner = repositories.repository_owner
+               AND projects.repository_name = repositories.repository_name)
+        """
+        cursor.execute(delete_query)
+        connection.commit()
+        logger.info("Database cleaned successfully.")
+    except Error as e:
+        logger.error(f"Error cleaning database: {e}")
+    finally:
+        connection.close()
 
 
 def database_exists(name):
     "Check if database exists"
     if not Path(name).exists():
-        print(f"Database {name} does not exist, check spelling or create "
-              "running: gitrepodb init")
+        logger.error(f"Database {name} does not exist, check spelling or create by running: gitrepodb init")
         return False
     else:
+        logger.info(f"Database {name} exists.")
         return True
 
 
@@ -72,9 +82,9 @@ def init(name, overwrite):
         cursor.executescript(sql_script)
         connection.commit()
         connection.close()
-        print(f"Database created in: {name}")
+        logger.info(f"Database created in: {name}")
     except Error as e:
-        print(e)
+        logger.error(e)
 
 
 @gitrepodb.command()
@@ -119,7 +129,7 @@ def add(name, basepath):
     cursor.execute(build_path_string)
     connection.commit()
     connection.close()
-    print("Added query to database.")
+    logger.info("Added query to database.")
 
 
 @gitrepodb.command()
@@ -180,20 +190,20 @@ def query(project, query, name, head):
         if project in project_dict:
             query = f"language:{project_dict[project]},sort:stars-desc:archived=False"
         else:
-            print(f"Unknown project {project}")
+            logger.error(f"Unknown project {project}")
             return
     load_dotenv()
     try:
-        print("Querying github...", end="")
+        logger.info("Querying github...")
         g = Github(os.getenv('github'))
         repositories = g.search_repositories(query=query)
-        print(f"got {repositories.totalCount} repositories, will keep the top {head}")
+        logger.info(f"got {repositories.totalCount} repositories, will keep the top {head}")
     except BadCredentialsException as e:
-        print(e)
+        logger.error(e)
     connection = sqlite3.connect(name)
     cursor = connection.cursor()
     cursor.execute('DELETE FROM query_results')
-    print("Adding to database:")
+    logger.info("Adding to database:")
     for count, repo in tqdm(enumerate(repositories)):
         if count >= int(head):
             break
@@ -262,24 +272,24 @@ def clone(url, path):
     try:
         Repo.clone_from(url, path, depth=1)
     except exc.BadCredentialsException:
-        print("Bad credenttials")
+        logger.error("Bad credenttials")
     except exc.UnknownObjectException:
-        print("Non existing repository")
+        logger.error("Non existing repository")
 
 
 def pull_or_clone(url, path, pull=True):
     try:
         Repo(path).git_dir
-        print(f"Repository {url} already exists in {path}", end='')
+        logger.info(f"Repository {url} already exists in {path}")
         if pull:
-            print(" pulling...")
+            logger.info(" pulling...")
             Repo(path).remotes.origin.pull()
         else:
-            print(" skipping...")
+            logger.info(" skipping...")
     except exc.InvalidGitRepositoryError:
-        print(f"{path} is not a git repository, will clone {path} in it")
+        logger.info(f"{path} is not a git repository, will clone {path} in it")
         clone(url, path)
     except exc.NoSuchPathError:
-        print(f"Clonning {url} into {path}")
+        logger.info(f"Clonning {url} into {path}")
         Path(path).mkdir(parents=True)
         Repo.clone_from(url, path, depth=1)
