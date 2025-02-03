@@ -226,7 +226,7 @@ def query(project, query, name, head):
                                              repo.name,
                                              query,
                                              query_timestamp,
-                                             repo.clone_url))
+                                             repo.ssh_url))
     connection.commit()
     connection.close()
 
