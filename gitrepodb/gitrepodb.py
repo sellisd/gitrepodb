@@ -270,9 +270,9 @@ def sync(project, name):
 
 def clone(url, path):
     try:
-        Repo.clone_from(url, path, depth=1)
+        Repo.clone_from(url, path, '--single-branch', depth=1,)
     except exc.BadCredentialsException:
-        logger.error("Bad credenttials")
+        logger.error("Bad credentials")
     except exc.UnknownObjectException:
         logger.error("Non existing repository")
 
