@@ -121,40 +121,36 @@ def add(name, basepath):
     """Add query results to database."""
     if not database_exists(name):
         return
+        
     connection = sqlite3.connect(name)
     cursor = connection.cursor()
-    query_to_projects_string = """
-    REPLACE
-    INTO projects
-    SELECT
-      project,
-      repository_owner,
-      repository_name
-    FROM query_results
+    
+    # Single SQL script that handles all operations
+    sql_script = f"""
+    -- Add new projects from query results
+    REPLACE INTO projects
+    SELECT project, repository_owner, repository_name
+    FROM query_results;
+    
+    -- Add new repositories from query results
+    REPLACE INTO repositories
+    (repository_owner, repository_name, clone_url, repository_path)
+    SELECT 
+        repository_owner,
+        repository_name,
+        clone_url,
+        '{basepath}{os.sep}' || repository_owner || '{os.sep}' || repository_name
+    FROM query_results;
     """
-    query_to_repositories_string = """
-    REPLACE
-    INTO repositories
-    (
-      repository_owner,
-      repository_name,
-      clone_url
-      )
-    SELECT repository_owner,
-      repository_name,
-      clone_url
-    FROM query_results
-    """
-    build_path_string = f"""
-    UPDATE repositories
-    SET repository_path = '{basepath}{os.sep}' || repository_owner || '{os.sep}' || repository_name
-    """
-    cursor.execute(query_to_projects_string)
-    cursor.execute(query_to_repositories_string)
-    cursor.execute(build_path_string)
-    connection.commit()
-    connection.close()
-    logger.info("Added query to database.")
+    
+    try:
+        cursor.executescript(sql_script)
+        connection.commit()
+        logger.info("Added query results to database.")
+    except Error as e:
+        logger.error(f"Error adding to database: {e}")
+    finally:
+        connection.close()
 
 
 @gitrepodb.command()
