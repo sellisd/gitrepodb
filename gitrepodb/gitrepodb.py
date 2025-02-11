@@ -1,24 +1,24 @@
 import importlib.resources as pkg_resources
+import logging
 import os
 import sqlite3
+import time
 from datetime import datetime
 from pathlib import Path
 from sqlite3 import Error
-import logging
 
 import click
 from dotenv import load_dotenv
-from git import Repo, exc
+from git import GitCommandError, Repo, exc
 from github import Github
 from github.GithubException import BadCredentialsException
 from tqdm import tqdm
 
-project_dict = {'python': 'python',
-                'jupyter': '"Jupyter Notebook"',
-                'java': 'Java'}
+project_dict = {"python": "python", "jupyter": '"Jupyter Notebook"', "java": "Java"}
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 @click.group()
 def gitrepodb():
@@ -26,7 +26,11 @@ def gitrepodb():
 
 
 @gitrepodb.command()
-@click.option('--name', default='./repositories.db', help='Remove repositories that are not used in any project from the database.')
+@click.option(
+    "--name",
+    default="./repositories.db",
+    help="Remove repositories that are not used in any project from the database.",
+)
 def clean_database(name):
     """Delete rows in repository table that do not belong to a project."""
     if not database_exists(name):
@@ -56,7 +60,9 @@ def clean_database(name):
 def database_exists(name):
     "Check if database exists"
     if not Path(name).exists():
-        logger.error(f"Database {name} does not exist, check spelling or create by running: gitrepodb init")
+        logger.error(
+            f"Database {name} does not exist, check spelling or create by running: gitrepodb init"
+        )
         return False
     else:
         logger.info(f"Database {name} exists.")
@@ -64,21 +70,32 @@ def database_exists(name):
 
 
 @gitrepodb.command()
-@click.option('--name', default='./repositories.db', help='Path and file name '
-              'of database', show_default=True)
-@click.option('--overwrite/--no-overwrite', default=False, help='Overwrite '
-              'database file if existing', show_default=True)
+@click.option(
+    "--name",
+    default="./repositories.db",
+    help="Path and file name of database",
+    show_default=True,
+)
+@click.option(
+    "--overwrite/--no-overwrite",
+    default=False,
+    help="Overwrite database file if existing",
+    show_default=True,
+)
 def init(name, overwrite):
     conn = None
-    if(not overwrite):
+    if not overwrite:
         if Path(name).exists():
             print(f"{name} already exists I am not overwriting")
             return
     try:
         connection = sqlite3.connect(name)
         cursor = connection.cursor()
-        sql_script = (pkg_resources.files(
-            'gitrepodb.sql_scripts').joinpath('init.sql').read_text())
+        sql_script = (
+            pkg_resources.files("gitrepodb.sql_scripts")
+            .joinpath("init.sql")
+            .read_text()
+        )
         cursor.executescript(sql_script)
         connection.commit()
         connection.close()
@@ -88,10 +105,18 @@ def init(name, overwrite):
 
 
 @gitrepodb.command()
-@click.option('--name', default='./repositories.db', help='Path and file name '
-              'of database', show_default=True)
-@click.option('--basepath', default='./scratch', help='Path where all '
-              'repositories will be stored', show_default=True)
+@click.option(
+    "--name",
+    default="./repositories.db",
+    help="Path and file name of database",
+    show_default=True,
+)
+@click.option(
+    "--basepath",
+    default="./scratch",
+    help="Path where all repositories will be stored",
+    show_default=True,
+)
 def add(name, basepath):
     """Add query results to database."""
     if not database_exists(name):
@@ -133,12 +158,25 @@ def add(name, basepath):
 
 
 @gitrepodb.command()
-@click.option('--name', default='./repositories.db', help='Path and file name '
-              'of database', show_default=True)
-@click.option('--project', default=None, help='Download to disk repositories '
-              ' in project', show_default=True, required=True)
-@click.option('--update', default=False, help='If repository is already '
-              'cloned, pull to update', show_default=True)
+@click.option(
+    "--name",
+    default="./repositories.db",
+    help="Path and file name of database",
+    show_default=True,
+)
+@click.option(
+    "--project",
+    default=None,
+    help="Download to disk repositories  in project",
+    show_default=True,
+    required=True,
+)
+@click.option(
+    "--update",
+    default=False,
+    help="If repository is already cloned, pull to update",
+    show_default=True,
+)
 def download(name, project, update):
     if not database_exists(name):
         return
@@ -159,29 +197,47 @@ def download(name, project, update):
     cursor.execute(select_projects_string)
     rows = cursor.fetchall()
     for row in rows:
-        pull_or_clone(row['clone_url'], row['repository_path'], update)
+        pull_or_clone(row["clone_url"], row["repository_path"], update)
         # update database
         if update:
             last_pulled = datetime.utcnow().isoformat()
-            cursor.execute("""
+            cursor.execute(
+                """
             UPDATE repositories
             SET last_pulled = ?
             WHERE repository_owner = ? AND repository_name = ?
-            """, (last_pulled, row.repository_owner, row.repository_name))
+            """,
+                (last_pulled, row.repository_owner, row.repository_name),
+            )
 
 
 @gitrepodb.command()
-@click.option('--project', default='python',
-              help='Assign the query to a project', show_default=True,
-              required=True)
-@click.option('--query', default=None, help='Query using github API. If none'
-              ' is provided [defautl] then query using project as language',
-              show_default=True)
-@click.option('--name', default='./repositories.db', help='Path and file name '
-              'of database', show_default=True)
-@click.option('--head', default=5000,
-              help='Maximum number of repositories in query',
-              show_default=True)
+@click.option(
+    "--project",
+    default="python",
+    help="Assign the query to a project",
+    show_default=True,
+    required=True,
+)
+@click.option(
+    "--query",
+    default=None,
+    help="Query using github API. If none"
+    " is provided [defautl] then query using project as language",
+    show_default=True,
+)
+@click.option(
+    "--name",
+    default="./repositories.db",
+    help="Path and file name of database",
+    show_default=True,
+)
+@click.option(
+    "--head",
+    default=5000,
+    help="Maximum number of repositories in query",
+    show_default=True,
+)
 def query(project, query, name, head):
     """Query GitHub API and insert results into query_results table"""
     if not database_exists(name):
@@ -195,14 +251,16 @@ def query(project, query, name, head):
     load_dotenv()
     try:
         logger.info(f"Querying github with query {query}")
-        g = Github(os.getenv('github'))
+        g = Github(os.getenv("github"))
         repositories = g.search_repositories(query=query)
-        logger.info(f"got {repositories.totalCount} repositories, will keep the top {head}")
+        logger.info(
+            f"got {repositories.totalCount} repositories, will keep the top {head}"
+        )
     except BadCredentialsException as e:
         logger.error(e)
     connection = sqlite3.connect(name)
     cursor = connection.cursor()
-    cursor.execute('DELETE FROM query_results')
+    cursor.execute("DELETE FROM query_results")
     logger.info("Adding to database:")
     for count, repo in tqdm(enumerate(repositories)):
         if count >= int(head):
@@ -221,21 +279,34 @@ def query(project, query, name, head):
           (?, ?, ?, ?, ?, ?)
         """
         query_timestamp = datetime.utcnow().isoformat()
-        cursor.execute(insert_query_string, (project,
-                                             repo.owner.login,
-                                             repo.name,
-                                             query,
-                                             query_timestamp,
-                                             repo.ssh_url))
+        cursor.execute(
+            insert_query_string,
+            (
+                project,
+                repo.owner.login,
+                repo.name,
+                query,
+                query_timestamp,
+                repo.ssh_url,
+            ),
+        )
     connection.commit()
     connection.close()
 
 
 @gitrepodb.command()
-@click.option('--project', default='python', help='Query for popular project_dict '
-              'based on language', show_default=True)
-@click.option('--name', default='./repositories.db', help='Path and file name '
-              'of database', show_default=True)
+@click.option(
+    "--project",
+    default="python",
+    help="Query for popular project_dict based on language",
+    show_default=True,
+)
+@click.option(
+    "--name",
+    default="./repositories.db",
+    help="Path and file name of database",
+    show_default=True,
+)
 def sync(project, name):
     if not database_exists(name):
         return
@@ -268,13 +339,29 @@ def sync(project, name):
     connection.close()
 
 
-def clone(url, path):
-    try:
-        Repo.clone_from(url, path, '--single-branch', depth=1,)
-    except exc.BadCredentialsException:
-        logger.error("Bad credentials")
-    except exc.UnknownObjectException:
-        logger.error("Non existing repository")
+def clone(url, path, max_retries=3, initial_delay=60):
+    delay = initial_delay
+    attempts = 0
+    while attempts < max_retries:
+        try:
+            Repo.clone_from(url, path, "--single-branch", depth=1)
+            return
+        except exc.BadCredentialsException:
+            logger.error("Bad credentials")
+            return
+        except exc.UnknownObjectException:
+            logger.error("Non existing repository")
+            return
+        except GitCommandError as e:
+            attempts += 1
+            if attempts < max_retries:
+                logger.warning(
+                    f"Rate limit hit. Waiting {delay} seconds before retry {attempts}/{max_retries}"
+                )
+                time.sleep(delay)
+                delay *= 2  # Exponential backoff
+            else:
+                logger.error("Max retries reached. Clone failed due to rate limiting")
 
 
 def pull_or_clone(url, path, pull=True):
