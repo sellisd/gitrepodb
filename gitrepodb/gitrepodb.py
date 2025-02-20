@@ -163,13 +163,13 @@ def add(name, basepath):
 @click.option(
     "--project",
     default=None,
-    help="Download to disk repositories  in project",
+    help="Download to disk repositories in project",
     show_default=True,
     required=True,
 )
 @click.option(
     "--update",
-    default=False,
+    default=True,
     help="If repository is already cloned, pull to update",
     show_default=True,
 )
