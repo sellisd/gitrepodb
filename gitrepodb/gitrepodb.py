@@ -121,10 +121,10 @@ def add(name, basepath):
     """Add query results to database."""
     if not database_exists(name):
         return
-        
+
     connection = sqlite3.connect(name)
     cursor = connection.cursor()
-    
+
     # Single SQL script that handles all operations
     sql_script = f"""
     -- Add new projects from query results
@@ -142,7 +142,7 @@ def add(name, basepath):
         '{basepath}{os.sep}' || repository_owner || '{os.sep}' || repository_name
     FROM query_results;
     """
-    
+
     try:
         cursor.executescript(sql_script)
         connection.commit()
@@ -348,7 +348,7 @@ def clone(url, path, max_retries=3, initial_delay=60):
         except exc.UnknownObjectException:
             logger.error("Non existing repository")
             return
-        except GitCommandError as e:
+        except GitCommandError:
             attempts += 1
             if attempts < max_retries:
                 logger.warning(
