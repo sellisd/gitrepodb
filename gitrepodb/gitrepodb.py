@@ -16,7 +16,11 @@ from tqdm import tqdm
 
 project_dict = {"python": "python", "jupyter": '"Jupyter Notebook"', "java": "Java"}
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger(__name__)
 
 
@@ -81,20 +85,24 @@ def database_exists(name):
     show_default=True,
 )
 def init(name, overwrite):
+    logger.debug(f"Initializing database with name: {name}, overwrite: {overwrite}")
     if not overwrite:
         if Path(name).exists():
-            print(f"{name} already exists I am not overwriting")
+            logger.warning(f"{name} already exists I am not overwriting")
             return
     try:
+        logger.debug("Attempting to create database connection")
         connection = sqlite3.connect(name)
         cursor = connection.cursor()
+        logger.debug("Reading SQL initialization script")
         sql_script = pkg_resources.files("gitrepodb.sql_scripts").joinpath("init.sql").read_text()
+        logger.debug("Executing SQL initialization script")
         cursor.executescript(sql_script)
         connection.commit()
         connection.close()
         logger.info(f"Database created in: {name}")
     except Error as e:
-        logger.error(e)
+        logger.error(f"Failed to initialize database: {e}")
 
 
 @gitrepodb.command()
@@ -112,11 +120,13 @@ def init(name, overwrite):
 )
 def add(name, basepath):
     """Add query results to database."""
+    logger.debug(f"Adding query results to database {name} with basepath {basepath}")
     if not database_exists(name):
         return
 
     connection = sqlite3.connect(name)
     cursor = connection.cursor()
+    logger.debug("Preparing to execute SQL operations for adding query results")
 
     # Single SQL script that handles all operations
     sql_script = f"""
@@ -139,11 +149,12 @@ def add(name, basepath):
     try:
         cursor.executescript(sql_script)
         connection.commit()
-        logger.info("Added query results to database.")
+        logger.info("Successfully added query results to database")
     except Error as e:
         logger.error(f"Error adding to database: {e}")
     finally:
         connection.close()
+        logger.debug("Database connection closed")
 
 
 @gitrepodb.command()
@@ -167,11 +178,13 @@ def add(name, basepath):
     show_default=True,
 )
 def download(name, project, update):
+    logger.debug(f"Starting download for project: {project}, update mode: {update}")
     if not database_exists(name):
         return
     connection = sqlite3.connect(name)
     connection.row_factory = sqlite3.Row
     cursor = connection.cursor()
+    logger.debug(f"Executing query to fetch repositories for project: {project}")
     select_projects_string = f"""
     SELECT projects.repository_owner,
       projects.repository_name,
@@ -326,17 +339,20 @@ def sync(project, name):
 
 
 def clone(url, path, max_retries=3, initial_delay=60):
+    logger.debug(f"Attempting to clone {url} to {path}")
     delay = initial_delay
     attempts = 0
     while attempts < max_retries:
         try:
+            logger.info(f"Cloning repository {url} (attempt {attempts + 1}/{max_retries})")
             Repo.clone_from(url, path, "--single-branch", depth=1)
+            logger.debug("Clone successful")
             return
         except exc.BadCredentialsException:
-            logger.error("Bad credentials")
+            logger.error(f"Bad credentials when trying to clone {url}")
             return
         except exc.UnknownObjectException:
-            logger.error("Non existing repository")
+            logger.error(f"Repository not found: {url}")
             return
         except GitCommandError:
             attempts += 1
@@ -345,22 +361,29 @@ def clone(url, path, max_retries=3, initial_delay=60):
                 time.sleep(delay)
                 delay *= 2  # Exponential backoff
             else:
-                logger.error("Max retries reached. Clone failed due to rate limiting")
+                logger.error(f"Max retries reached. Clone failed for {url} due to rate limiting")
 
 
 def pull_or_clone(url, path, pull=True):
+    logger.debug(f"Starting pull_or_clone for {url} at {path}")
     try:
         Repo(path).git_dir
         logger.info(f"Repository {url} already exists in {path}")
         if pull:
-            logger.info(" pulling...")
+            logger.info("Pulling latest changes...")
+            breakpoint()
             Repo(path).remotes.origin.pull()
+            logger.debug("Pull completed successfully")
         else:
-            logger.info(" skipping...")
+            logger.info("Skipping pull operation")
     except exc.InvalidGitRepositoryError:
-        logger.info(f"{path} is not a git repository, will clone {path} in it")
+        logger.warning(f"{path} is not a git repository, will clone {url} in it")
         clone(url, path)
     except exc.NoSuchPathError:
-        logger.info(f"Clonning {url} into {path}")
+        logger.info(f"Cloning {url} into {path}")
         Path(path).mkdir(parents=True)
-        Repo.clone_from(url, path, depth=1)
+        try:
+            Repo.clone_from(url, path, depth=1)
+            logger.debug("Clone completed successfully")
+        except Exception as e:
+            logger.error(f"Failed to clone repository: {e}")
