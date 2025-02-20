@@ -1,14 +1,16 @@
 import sqlite3
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 from click.testing import CliRunner
 from git import exc
+
 from gitrepodb.gitrepodb import (
+    add,
+    clean_database,
     database_exists,
     init,
-    clean_database,
-    add,
     pull_or_clone,
 )
 

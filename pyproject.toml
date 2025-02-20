@@ -17,7 +17,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = [
+dev = [
+    "ruff>=0.9.7",
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
 ]
@@ -32,3 +33,20 @@ path = "gitrepodb/__about__.py"
 include = [
     "/gitrepodb"
 ]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

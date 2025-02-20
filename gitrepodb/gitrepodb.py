@@ -60,9 +60,7 @@ def clean_database(name):
 def database_exists(name):
     "Check if database exists"
     if not Path(name).exists():
-        logger.error(
-            f"Database {name} does not exist, check spelling or create by running: gitrepodb init"
-        )
+        logger.error(f"Database {name} does not exist, check spelling or create by running: gitrepodb init")
         return False
     else:
         logger.info(f"Database {name} exists.")
@@ -83,7 +81,6 @@ def database_exists(name):
     show_default=True,
 )
 def init(name, overwrite):
-    conn = None
     if not overwrite:
         if Path(name).exists():
             print(f"{name} already exists I am not overwriting")
@@ -91,11 +88,7 @@ def init(name, overwrite):
     try:
         connection = sqlite3.connect(name)
         cursor = connection.cursor()
-        sql_script = (
-            pkg_resources.files("gitrepodb.sql_scripts")
-            .joinpath("init.sql")
-            .read_text()
-        )
+        sql_script = pkg_resources.files("gitrepodb.sql_scripts").joinpath("init.sql").read_text()
         cursor.executescript(sql_script)
         connection.commit()
         connection.close()
@@ -218,8 +211,7 @@ def download(name, project, update):
 @click.option(
     "--query",
     default=None,
-    help="Query using github API. If none"
-    " is provided [defautl] then query using project as language",
+    help="Query using github API. If none is provided [defautl] then query using project as language",
     show_default=True,
 )
 @click.option(
@@ -249,9 +241,7 @@ def query(project, query, name, head):
         logger.info(f"Querying github with query {query}")
         g = Github(os.getenv("github"))
         repositories = g.search_repositories(query=query)
-        logger.info(
-            f"got {repositories.totalCount} repositories, will keep the top {head}"
-        )
+        logger.info(f"got {repositories.totalCount} repositories, will keep the top {head}")
     except BadCredentialsException as e:
         logger.error(e)
     connection = sqlite3.connect(name)
@@ -351,9 +341,7 @@ def clone(url, path, max_retries=3, initial_delay=60):
         except GitCommandError:
             attempts += 1
             if attempts < max_retries:
-                logger.warning(
-                    f"Rate limit hit. Waiting {delay} seconds before retry {attempts}/{max_retries}"
-                )
+                logger.warning(f"Rate limit hit. Waiting {delay} seconds before retry {attempts}/{max_retries}")
                 time.sleep(delay)
                 delay *= 2  # Exponential backoff
             else:
